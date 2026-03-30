@@ -7,53 +7,66 @@ namespace SentryDevOpsAgent.Functions;
 
 public class SentryDevopsFunction
 {
-    private readonly AzureDevOpsService _azureDevOpsService;
-    private readonly IOptions<SentryMcpOptions> _sentryMcpOptions;
-    private readonly IOptions<AzureAIOptions> _azureAIOptions;
+    private readonly ILogger<SentryDevopsFunction> _logger;
 
-    public SentryDevopsFunction(
-        AzureDevOpsService azureDevOpsService,
-        IOptions<SentryMcpOptions> sentryMcpOptions,
-        IOptions<AzureAIOptions> azureAIOptions)
+    public SentryDevopsFunction(ILogger<SentryDevopsFunction> logger)
     {
-        _azureDevOpsService = azureDevOpsService;
-        _sentryMcpOptions = sentryMcpOptions;
-        _azureAIOptions = azureAIOptions;
+        _logger = logger;
     }
 
-    [Function("ProcessSentryIssues")]
-    public async Task Run(
-        [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
-        FunctionContext context)
+    [Function("SentryDevopsFunction")]
+    public void Run([TimerTrigger("*/30 * * * * *")] TimerInfo timer)
     {
-        var logger = context.GetLogger("ProcessSentryIssues");
-        await ProcessAsync(logger);
+        _logger.LogInformation("🔥 Hello from TestTimerFunction at: {time}", DateTime.UtcNow);
     }
 
-    [Function("ManualRun")]
-    public async Task<HttpResponseData> ManualRun(
-    [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
-    FunctionContext context)
-    {
-        var logger = context.GetLogger("ManualRun");
+    //private readonly AzureDevOpsService _azureDevOpsService;
+    //private readonly IOptions<SentryMcpOptions> _sentryMcpOptions;
+    //private readonly IOptions<AzureAIOptions> _azureAIOptions;
 
-        logger.LogInformation("Manual trigger started");
+    //public SentryDevopsFunction(
+    //    AzureDevOpsService azureDevOpsService,
+    //    IOptions<SentryMcpOptions> sentryMcpOptions,
+    //    IOptions<AzureAIOptions> azureAIOptions)
+    //{
+    //    _azureDevOpsService = azureDevOpsService;
+    //    _sentryMcpOptions = sentryMcpOptions;
+    //    _azureAIOptions = azureAIOptions;
+    //}
 
-        try
-        {
-            await ProcessAsync(logger);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.ToString()); // 👈 IMPORTANT
-            logger.LogError(ex, "Error in ManualRun");
-            throw;
-        }
-        var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
-        await response.WriteStringAsync("Executed successfully");
+    //[Function("ProcessSentryIssues")]
+    //public async Task Run(
+    //    [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
+    //    FunctionContext context)
+    //{
+    //    var logger = context.GetLogger("ProcessSentryIssues");
+    //    await ProcessAsync(logger);
+    //}
 
-        return response;
-    }
+    //[Function("ManualRun")]
+    //public async Task<HttpResponseData> ManualRun(
+    //[HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+    //FunctionContext context)
+    //{
+    //    var logger = context.GetLogger("ManualRun");
+
+    //    logger.LogInformation("Manual trigger started");
+
+    //    try
+    //    {
+    //        await ProcessAsync(logger);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Console.WriteLine(ex.ToString()); // 👈 IMPORTANT
+    //        logger.LogError(ex, "Error in ManualRun");
+    //        throw;
+    //    }
+    //    var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+    //    await response.WriteStringAsync("Executed successfully");
+
+    //    return response;
+    //}
 
     private async Task ProcessAsync(ILogger logger)
     {
