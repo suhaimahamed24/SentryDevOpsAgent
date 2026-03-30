@@ -1,4 +1,4 @@
-using Microsoft.Azure.Functions.Worker;
+﻿using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -44,6 +44,7 @@ public class SentryDevopsFunction
         }
         catch (Exception ex)
         {
+            Console.WriteLine(ex.ToString()); // 👈 IMPORTANT
             logger.LogError(ex, "Error in ManualRun");
             throw;
         }
