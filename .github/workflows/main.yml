@@ -1,0 +1,54 @@
+name: Build and Deploy Azure Function
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'sentrydevopsagent'
+  DOTNET_VERSION: '8.0'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 🔐 Azure login using Service Principal (OIDC)
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # ⚙️ Setup .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # 📦 Restore
+      - name: Restore
+        run: dotnet restore
+
+      # 🔨 Build
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # 🚀 Publish (IMPORTANT path based on your structure)
+      - name: Publish
+        run: dotnet publish SentryDevOpsAgent/SentryDevOpsAgent.csproj -c Release -o ./publish
+
+      # ☁️ Deploy to Azure Function
+      - name: Deploy to Azure Function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ./publish
