@@ -24,7 +24,7 @@ public class SentryDevopsFunction
     }
 
     [Function("SentryDevopsFunction")]
-    public void Run([TimerTrigger("*/30 * * * * *")] TimerInfo timer)
+    public void TestTimer([TimerTrigger("*/30 * * * * *")] TimerInfo timer)
     {
         _logger.LogInformation("🔥 v2: Hello from TestTimerFunction at: {time}", DateTime.UtcNow);
         _logger.LogInformation("Org: {org}",
@@ -32,7 +32,7 @@ public class SentryDevopsFunction
     }
 
     [Function("ProcessSentryIssues")]
-    public async Task Run(
+    public async Task ProcessSentryIssuesTimer(
         [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
         FunctionContext context)
     {
