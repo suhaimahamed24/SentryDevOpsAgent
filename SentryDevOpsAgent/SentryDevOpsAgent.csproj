@@ -28,6 +28,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Include="host.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
         <None Remove="appsettings.json" />
     </ItemGroup>
 
