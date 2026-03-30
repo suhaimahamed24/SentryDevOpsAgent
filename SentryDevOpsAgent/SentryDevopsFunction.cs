@@ -56,63 +56,65 @@ public class SentryDevopsFunction
 
     private async Task ProcessAsync(ILogger logger)
     {
-        SentryAgentClient? sentryAgent = null;
 
-        try
-        {
-            sentryAgent = await SentryAgentClient.CreateAsync(
-                _azureAIOptions,
-                _sentryMcpOptions);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to create MCP client");
-            return;
-        }
+        logger.LogInformation("I am herer");
+        //SentryAgentClient? sentryAgent = null;
 
-        await using (sentryAgent)
-        {
-            var searchResult = await sentryAgent.SearchIssuesAsync(
-                "Search unresolved issues in arf-frontend project in exact-software organization from production environment, limit to 3");
+        //try
+        //{
+        //    sentryAgent = await SentryAgentClient.CreateAsync(
+        //        _azureAIOptions,
+        //        _sentryMcpOptions);
+        //}
+        //catch (Exception ex)
+        //{
+        //    logger.LogError(ex, "Failed to create MCP client");
+        //    return;
+        //}
 
-            if (searchResult is null || searchResult.Issues.Count == 0)
-            {
-                logger.LogInformation("No Sentry issues found.");
-                return;
-            }
+        //await using (sentryAgent)
+        //{
+        //    var searchResult = await sentryAgent.SearchIssuesAsync(
+        //        "Search unresolved issues in arf-frontend project in exact-software organization from production environment, limit to 3");
 
-            foreach (var sentryIssue in searchResult.Issues)
-            {
-                var detail = await sentryAgent.GetIssueDetailsAsync(
-                    sentryIssue.Id,
-                    _sentryMcpOptions.Value.DefaultOrganizationSlug);
+        //    if (searchResult is null || searchResult.Issues.Count == 0)
+        //    {
+        //        logger.LogInformation("No Sentry issues found.");
+        //        return;
+        //    }
 
-                if (detail == null)
-                    continue;
+        //    foreach (var sentryIssue in searchResult.Issues)
+        //    {
+        //        var detail = await sentryAgent.GetIssueDetailsAsync(
+        //            sentryIssue.Id,
+        //            _sentryMcpOptions.Value.DefaultOrganizationSlug);
 
-                var stackTrace = sentryAgent.GetStackTraceAsString(detail);
+        //        if (detail == null)
+        //            continue;
 
-                var workItem = new WorkItem
-                {
-                    Title = sentryIssue.Title,
-                    AssignedTo = "Suhaim Ahamed",
-                    Description = sentryIssue.Url,
-                    AreaPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting",
-                    IterationPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting\\Nova\\2026\\Sprint 1112",
-                    Tags = $"SentryIssueId_{sentryIssue.Id}",
-                    ReproSteps = $@"
-                <h3>Stack Trace</h3>
-                <pre>{stackTrace}</pre>
+        //        var stackTrace = sentryAgent.GetStackTraceAsString(detail);
 
-                <h3>Sentry Issue</h3>
-                <a href=""{sentryIssue.Url}"" target=""_blank"">Open in Sentry</a>
-            "
-                };
+        //        var workItem = new WorkItem
+        //        {
+        //            Title = sentryIssue.Title,
+        //            AssignedTo = "Suhaim Ahamed",
+        //            Description = sentryIssue.Url,
+        //            AreaPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting",
+        //            IterationPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting\\Nova\\2026\\Sprint 1112",
+        //            Tags = $"SentryIssueId_{sentryIssue.Id}",
+        //            ReproSteps = $@"
+        //        <h3>Stack Trace</h3>
+        //        <pre>{stackTrace}</pre>
 
-                var id = await _azureDevOpsService.CreateBugFromSentryAsync(workItem, sentryIssue.Id);
+        //        <h3>Sentry Issue</h3>
+        //        <a href=""{sentryIssue.Url}"" target=""_blank"">Open in Sentry</a>
+        //    "
+        //        };
 
-                logger.LogInformation($"Created Bug ID: {id}");
-            }
-        }
+        //        var id = await _azureDevOpsService.CreateBugFromSentryAsync(workItem, sentryIssue.Id);
+
+        //        logger.LogInformation($"Created Bug ID: {id}");
+        //    }
+        //}
     }
 }
