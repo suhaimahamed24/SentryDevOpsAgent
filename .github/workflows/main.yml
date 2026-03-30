@@ -13,6 +13,7 @@ permissions:
 env:
   AZURE_FUNCTIONAPP_NAME: 'sentrydevopsagent'
   DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'SentryDevOpsAgent/SentryDevOpsAgent.csproj'
 
 jobs:
   build-and-deploy:
@@ -37,16 +38,22 @@ jobs:
 
       # 📦 Restore
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore ${{ env.PROJECT_PATH }}
 
       # 🔨 Build
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
-      # 🚀 Publish (IMPORTANT FIX)
+      # 🚀 Publish (FIXED)
       - name: Publish
-        run: dotnet publish -c Release -o ./publish /p:UseAppHost=false
-        
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish /p:UseAppHost=false
+
+      # 🔍 DEBUG (keep for now)
+      - name: Verify publish output
+        run: |
+          echo "===== PUBLISH CONTENT ====="
+          ls -R ./publish
+
       # ☁️ Deploy
       - name: Deploy to Azure Function
         uses: Azure/functions-action@v1
