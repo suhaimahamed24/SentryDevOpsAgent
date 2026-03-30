@@ -56,50 +56,63 @@ public class SentryDevopsFunction
 
     private async Task ProcessAsync(ILogger logger)
     {
-        await using var sentryAgent = await SentryAgentClient.CreateAsync(
-            _azureAIOptions,
-            _sentryMcpOptions);
+        SentryAgentClient? sentryAgent = null;
 
-        var searchResult = await sentryAgent.SearchIssuesAsync(
-            "Search unresolved issues in arf-frontend project in exact-software organization from production environment, limit to 3");
-
-        if (searchResult is null || searchResult.Issues.Count == 0)
+        try
         {
-            logger.LogInformation("No Sentry issues found.");
+            sentryAgent = await SentryAgentClient.CreateAsync(
+                _azureAIOptions,
+                _sentryMcpOptions);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create MCP client");
             return;
         }
 
-        foreach (var sentryIssue in searchResult.Issues)
+        await using (sentryAgent)
         {
-            var detail = await sentryAgent.GetIssueDetailsAsync(
-                sentryIssue.Id,
-                _sentryMcpOptions.Value.DefaultOrganizationSlug);
+            var searchResult = await sentryAgent.SearchIssuesAsync(
+                "Search unresolved issues in arf-frontend project in exact-software organization from production environment, limit to 3");
 
-            if (detail == null)
-                continue;
-
-            var stackTrace = sentryAgent.GetStackTraceAsString(detail);
-
-            var workItem = new WorkItem
+            if (searchResult is null || searchResult.Issues.Count == 0)
             {
-                Title = sentryIssue.Title,
-                AssignedTo = "Suhaim Ahamed",
-                Description = sentryIssue.Url,
-                AreaPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting",
-                IterationPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting\\Nova\\2026\\Sprint 1112",
-                Tags = $"SentryIssueId_{sentryIssue.Id}",
-                ReproSteps = $@"
+                logger.LogInformation("No Sentry issues found.");
+                return;
+            }
+
+            foreach (var sentryIssue in searchResult.Issues)
+            {
+                var detail = await sentryAgent.GetIssueDetailsAsync(
+                    sentryIssue.Id,
+                    _sentryMcpOptions.Value.DefaultOrganizationSlug);
+
+                if (detail == null)
+                    continue;
+
+                var stackTrace = sentryAgent.GetStackTraceAsString(detail);
+
+                var workItem = new WorkItem
+                {
+                    Title = sentryIssue.Title,
+                    AssignedTo = "Suhaim Ahamed",
+                    Description = sentryIssue.Url,
+                    AreaPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting",
+                    IterationPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting\\Nova\\2026\\Sprint 1112",
+                    Tags = $"SentryIssueId_{sentryIssue.Id}",
+                    ReproSteps = $@"
                 <h3>Stack Trace</h3>
                 <pre>{stackTrace}</pre>
 
                 <h3>Sentry Issue</h3>
                 <a href=""{sentryIssue.Url}"" target=""_blank"">Open in Sentry</a>
             "
-            };
+                };
 
-            var id = await _azureDevOpsService.CreateBugFromSentryAsync(workItem, sentryIssue.Id);
+                var id = await _azureDevOpsService.CreateBugFromSentryAsync(workItem, sentryIssue.Id);
 
-            logger.LogInformation($"Created Bug ID: {id}");
+                logger.LogInformation($"Created Bug ID: {id}");
+            }
         }
     }
 }
