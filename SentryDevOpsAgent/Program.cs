@@ -17,12 +17,10 @@ var host = new HostBuilder()
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
-
-//        services.AddApplicationInsightsTelemetryWorkerService();
-
+        services.AddApplicationInsightsTelemetryWorkerService();
         services.AddSentryService(configuration);
-//        services.AddAzureDevOps(configuration);
-//        services.AddAzureAI(configuration);
+        services.AddAzureDevOps(configuration);
+        services.AddAzureAI(configuration);
     })
     .Build();
 
