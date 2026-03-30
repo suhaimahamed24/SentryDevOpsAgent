@@ -38,8 +38,15 @@ public class SentryDevopsFunction
 
         logger.LogInformation("Manual trigger started");
 
-        await ProcessAsync(logger);
-
+        try
+        {
+            await ProcessAsync(logger);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error in ManualRun");
+            throw;
+        }
         var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
         await response.WriteStringAsync("Executed successfully");
 
