@@ -14,16 +14,16 @@ var host = new HostBuilder()
         config.AddJsonFile("appsettings.json", optional: true)
               .AddEnvironmentVariables();
     })
-//    .ConfigureServices((context, services) =>
-//    {
-//        var configuration = context.Configuration;
+    .ConfigureServices((context, services) =>
+    {
+        var configuration = context.Configuration;
 
 //        services.AddApplicationInsightsTelemetryWorkerService();
 
-//        services.AddSentryService(configuration);
+        services.AddSentryService(configuration);
 //        services.AddAzureDevOps(configuration);
 //        services.AddAzureAI(configuration);
-//    })
+    })
     .Build();
 
 host.Run();

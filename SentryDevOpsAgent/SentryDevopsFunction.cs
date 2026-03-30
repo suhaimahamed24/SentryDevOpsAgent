@@ -2,22 +2,27 @@
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualStudio.Services.Client.AccountManagement.Logging;
 using SentryIssuesAgent;
 namespace SentryDevOpsAgent.Functions;
 
 public class SentryDevopsFunction
 {
     private readonly ILogger<SentryDevopsFunction> _logger;
+    private readonly IOptions<SentryMcpOptions> _sentryMcpOptions;
 
-    public SentryDevopsFunction(ILogger<SentryDevopsFunction> logger)
+    public SentryDevopsFunction(ILogger<SentryDevopsFunction> logger, IOptions<SentryMcpOptions> sentryMcpOptions)
     {
         _logger = logger;
+        _sentryMcpOptions = sentryMcpOptions;
     }
 
     [Function("SentryDevopsFunction")]
     public void Run([TimerTrigger("*/30 * * * * *")] TimerInfo timer)
     {
-        _logger.LogInformation("🔥 Hello from TestTimerFunction at: {time}", DateTime.UtcNow);
+        _logger.LogInformation("🔥 v2: Hello from TestTimerFunction at: {time}", DateTime.UtcNow);
+        _logger.LogInformation("Org: {org}",
+            _sentryMcpOptions.Value.AccessToken);
     }
 
     //private readonly AzureDevOpsService _azureDevOpsService;
@@ -68,10 +73,9 @@ public class SentryDevopsFunction
     //    return response;
     //}
 
-    private async Task ProcessAsync(ILogger logger)
+    private async Task ProcessAsync()
     {
-
-        logger.LogInformation("I am herer");
+        _logger.LogInformation("I am herer");
         //SentryAgentClient? sentryAgent = null;
 
         //try
