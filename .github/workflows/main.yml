@@ -46,11 +46,12 @@ jobs:
 
       # 🚀 Publish (IMPORTANT FIX)
       - name: Publish
-        run: dotnet publish ${{ env.PROJECT_PATH }} \
-              -c Release \
-              -o ./publish \
-              /p:UseAppHost=false \
-              /p:GenerateRuntimeConfigurationFiles=true
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            -c Release \
+            -o ./publish \
+            /p:UseAppHost=false \
+            /p:GenerateRuntimeConfigurationFiles=true
 
       # 🔍 Verify output (KEEP THIS UNTIL WORKS)
       - name: Verify publish output
