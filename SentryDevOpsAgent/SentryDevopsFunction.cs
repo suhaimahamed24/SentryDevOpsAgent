@@ -2,19 +2,25 @@
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.Services.Client.AccountManagement.Logging;
 using SentryIssuesAgent;
 namespace SentryDevOpsAgent.Functions;
 
 public class SentryDevopsFunction
 {
     private readonly ILogger<SentryDevopsFunction> _logger;
+    private readonly AzureDevOpsService _azureDevOpsService;
     private readonly IOptions<SentryMcpOptions> _sentryMcpOptions;
+    private readonly IOptions<AzureAIOptions> _azureAIOptions;
 
-    public SentryDevopsFunction(ILogger<SentryDevopsFunction> logger, IOptions<SentryMcpOptions> sentryMcpOptions)
+    public SentryDevopsFunction(ILogger<SentryDevopsFunction> logger, 
+        AzureDevOpsService azureDevOpsService,
+        IOptions<SentryMcpOptions> sentryMcpOptions,
+        IOptions<AzureAIOptions> azureAIOptions)
     {
         _logger = logger;
+        _azureDevOpsService = azureDevOpsService;
         _sentryMcpOptions = sentryMcpOptions;
+        _azureAIOptions = azureAIOptions;
     }
 
     [Function("SentryDevopsFunction")]
@@ -25,114 +31,97 @@ public class SentryDevopsFunction
             _sentryMcpOptions.Value.AccessToken);
     }
 
-    //private readonly AzureDevOpsService _azureDevOpsService;
-    //private readonly IOptions<SentryMcpOptions> _sentryMcpOptions;
-    //private readonly IOptions<AzureAIOptions> _azureAIOptions;
+    [Function("ProcessSentryIssues")]
+    public async Task Run(
+        [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
+        FunctionContext context)
+    {
+        await ProcessAsync();
+    }
 
-    //public SentryDevopsFunction(
-    //    AzureDevOpsService azureDevOpsService,
-    //    IOptions<SentryMcpOptions> sentryMcpOptions,
-    //    IOptions<AzureAIOptions> azureAIOptions)
-    //{
-    //    _azureDevOpsService = azureDevOpsService;
-    //    _sentryMcpOptions = sentryMcpOptions;
-    //    _azureAIOptions = azureAIOptions;
-    //}
+    [Function("ManualRun")]
+    public async Task<HttpResponseData> ManualRun(
+    [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
+    FunctionContext context)
+    {
+        _logger.LogInformation("Manual trigger started");
 
-    //[Function("ProcessSentryIssues")]
-    //public async Task Run(
-    //    [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
-    //    FunctionContext context)
-    //{
-    //    var logger = context.GetLogger("ProcessSentryIssues");
-    //    await ProcessAsync(logger);
-    //}
+        try
+        {
+            await ProcessAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString()); // 👈 IMPORTANT
+            _logger.LogError(ex, "Error in ManualRun");
+            throw;
+        }
+        var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+        await response.WriteStringAsync("Executed successfully");
 
-    //[Function("ManualRun")]
-    //public async Task<HttpResponseData> ManualRun(
-    //[HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req,
-    //FunctionContext context)
-    //{
-    //    var logger = context.GetLogger("ManualRun");
-
-    //    logger.LogInformation("Manual trigger started");
-
-    //    try
-    //    {
-    //        await ProcessAsync(logger);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Console.WriteLine(ex.ToString()); // 👈 IMPORTANT
-    //        logger.LogError(ex, "Error in ManualRun");
-    //        throw;
-    //    }
-    //    var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
-    //    await response.WriteStringAsync("Executed successfully");
-
-    //    return response;
-    //}
+        return response;
+    }
 
     private async Task ProcessAsync()
     {
         _logger.LogInformation("I am herer");
-        //SentryAgentClient? sentryAgent = null;
+        SentryAgentClient? sentryAgent = null;
 
-        //try
-        //{
-        //    sentryAgent = await SentryAgentClient.CreateAsync(
-        //        _azureAIOptions,
-        //        _sentryMcpOptions);
-        //}
-        //catch (Exception ex)
-        //{
-        //    logger.LogError(ex, "Failed to create MCP client");
-        //    return;
-        //}
+        try
+        {
+            sentryAgent = await SentryAgentClient.CreateAsync(
+                _azureAIOptions,
+                _sentryMcpOptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create MCP client");
+            return;
+        }
 
-        //await using (sentryAgent)
-        //{
-        //    var searchResult = await sentryAgent.SearchIssuesAsync(
-        //        "Search unresolved issues in arf-frontend project in exact-software organization from production environment, limit to 3");
+        await using (sentryAgent)
+        {
+            var searchResult = await sentryAgent.SearchIssuesAsync(
+                "Search unresolved issues in arf-frontend project in exact-software organization from production environment, limit to 3");
 
-        //    if (searchResult is null || searchResult.Issues.Count == 0)
-        //    {
-        //        logger.LogInformation("No Sentry issues found.");
-        //        return;
-        //    }
+            if (searchResult is null || searchResult.Issues.Count == 0)
+            {
+                _logger.LogInformation("No Sentry issues found.");
+                return;
+            }
 
-        //    foreach (var sentryIssue in searchResult.Issues)
-        //    {
-        //        var detail = await sentryAgent.GetIssueDetailsAsync(
-        //            sentryIssue.Id,
-        //            _sentryMcpOptions.Value.DefaultOrganizationSlug);
+            foreach (var sentryIssue in searchResult.Issues)
+            {
+                var detail = await sentryAgent.GetIssueDetailsAsync(
+                    sentryIssue.Id,
+                    _sentryMcpOptions.Value.DefaultOrganizationSlug);
 
-        //        if (detail == null)
-        //            continue;
+                if (detail == null)
+                    continue;
 
-        //        var stackTrace = sentryAgent.GetStackTraceAsString(detail);
+                var stackTrace = sentryAgent.GetStackTraceAsString(detail);
 
-        //        var workItem = new WorkItem
-        //        {
-        //            Title = sentryIssue.Title,
-        //            AssignedTo = "Suhaim Ahamed",
-        //            Description = sentryIssue.Url,
-        //            AreaPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting",
-        //            IterationPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting\\Nova\\2026\\Sprint 1112",
-        //            Tags = $"SentryIssueId_{sentryIssue.Id}",
-        //            ReproSteps = $@"
-        //        <h3>Stack Trace</h3>
-        //        <pre>{stackTrace}</pre>
+                var workItem = new WorkItem
+                {
+                    Title = sentryIssue.Title,
+                    AssignedTo = "Suhaim Ahamed",
+                    Description = sentryIssue.Url,
+                    AreaPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting",
+                    IterationPath = "EOL-AnnualReporting-Fiscal\\Annual Reporting\\Nova\\2026\\Sprint 1112",
+                    Tags = $"SentryIssueId_{sentryIssue.Id}",
+                    ReproSteps = $@"
+                <h3>Stack Trace</h3>
+                <pre>{stackTrace}</pre>
 
-        //        <h3>Sentry Issue</h3>
-        //        <a href=""{sentryIssue.Url}"" target=""_blank"">Open in Sentry</a>
-        //    "
-        //        };
+                <h3>Sentry Issue</h3>
+                <a href=""{sentryIssue.Url}"" target=""_blank"">Open in Sentry</a>
+            "
+                };
 
-        //        var id = await _azureDevOpsService.CreateBugFromSentryAsync(workItem, sentryIssue.Id);
+                var id = await _azureDevOpsService.CreateBugFromSentryAsync(workItem, sentryIssue.Id);
 
-        //        logger.LogInformation($"Created Bug ID: {id}");
-        //    }
-        //}
+                _logger.LogInformation($"Created Bug ID: {id}");
+            }
+        }
     }
 }
