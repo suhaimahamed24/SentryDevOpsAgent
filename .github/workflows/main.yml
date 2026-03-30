@@ -20,11 +20,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 📥 Checkout
+      # 📥 Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 🔐 Azure login
+      # 🔐 Login to Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -44,19 +44,29 @@ jobs:
       - name: Build
         run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
-      # 🚀 Publish (FIXED)
+      # 🚀 Publish (IMPORTANT FIX)
       - name: Publish
-        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -o ./publish /p:UseAppHost=false
+        run: dotnet publish ${{ env.PROJECT_PATH }} \
+              -c Release \
+              -o ./publish \
+              /p:UseAppHost=false \
+              /p:GenerateRuntimeConfigurationFiles=true
 
-      # 🔍 DEBUG (keep for now)
+      # 🔍 Verify output (KEEP THIS UNTIL WORKS)
       - name: Verify publish output
         run: |
           echo "===== PUBLISH CONTENT ====="
           ls -R ./publish
 
-      # ☁️ Deploy
+      # 📦 Zip package (CRITICAL)
+      - name: Archive publish output
+        run: |
+          cd publish
+          zip -r ../release.zip .
+
+      # ☁️ Deploy to Azure Function
       - name: Deploy to Azure Function
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ./publish
+          package: release.zip
