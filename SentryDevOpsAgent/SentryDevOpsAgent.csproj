@@ -7,9 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <!-- 🔥 CRITICAL FIX -->
+    <!-- ✅ Required for Azure Functions -->
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <AzureFunctionsEnableWorkerIndexing>true</AzureFunctionsEnableWorkerIndexing>
+
+    <!-- 🔥 CRITICAL FIXES -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,7 +35,7 @@
     <PackageReference Include="Polly.Core" Version="8.6.6" />
   </ItemGroup>
 
-  <!-- 🔥 REQUIRED -->
+  <!-- Required -->
   <ItemGroup>
     <None Include="host.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
